@@ -1,0 +1,23 @@
+model_params:
+  ab_vocab_size: 21  # 20 AAs and a stop sign
+  embed_size: 1024
+  num_layers: 4
+  forward_expansion: 2
+  heads: 8
+  dropout: 0.15
+  device: 'cpu'
+  max_ab_length: 64  # max length of antibody vocabulary for embedding
+  lr: 0.0001
+  max_epochs: 30
+  warm_up: 1
+
+trainer_params:
+  max_epochs: 2
+  gpus: 1
+  # strategy: 'ddp'
+  log_every_n_steps: 1  # add loss to logger every n batch steps
+  val_check_interval: 1.0  # check validation every n% intervals of an epoch
+
+data_params:
+  batch_size: 4
+  workers: 4
