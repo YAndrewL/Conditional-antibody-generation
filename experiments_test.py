@@ -16,7 +16,6 @@ from transformers import BertTokenizer, BertModel
 import time
 
 
-
 def model_loader(ckpt, model_params: Dict):
     return Transformer().load_from_checkpoint(ckpt, **model_params)
 
@@ -56,8 +55,6 @@ if __name__ == '__main__':
     # print(generator.generate(1, 40, p=0.9, method='top-p'))
     # print(f"Running time: {time.time() - s}s.")
 
-
     # C
     metrics = Metrics(model=current_model)
     print(metrics.negative_log_likelihood("FYLRGLLLLHVW", antigen=antigen_encode))
-

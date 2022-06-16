@@ -13,19 +13,32 @@ import pytorch_lightning as pl
 
 class PairedBinder(Dataset):
     # paired antigen and antibody binder data
-    def __init__(self, mode='train', file=None):
+    def __init__(self, mode='train', species='murine', file=None):
         super(PairedBinder, self).__init__()
         assert mode in ['train', 'valid', 'test'], 'Error in dataset type.'
+        assert species in ['murine', 'human'], 'Murine or human supported.'
 
-        if mode == 'train':
-            self.data = pickle.load(open("dataset/abag_train.pkl", 'rb'))[:4]
-        elif mode == 'valid':
-            self.data = pickle.load(open('dataset/abag_valid.pkl', 'rb'))[:1]
-        else:
-            if file is None:
-                raise KeyError("No test file provided")
+        if species == 'murine':
+            if mode == 'train':
+                self.data = pickle.load(open("dataset/abag_train.pkl", 'rb'))[:100]
+            elif mode == 'valid':
+                self.data = pickle.load(open('dataset/abag_valid.pkl', 'rb'))[:10]
             else:
-                self.data = pickle.load((open(file, 'rb')))
+                if file is None:
+                    raise KeyError("No test file provided")
+                else:
+                    self.data = pickle.load((open(file, 'rb')))
+
+        elif species == 'human':
+            if mode == 'train':
+                self.data = pickle.load(open("dataset/human_abag_train.pkl", 'rb'))
+            elif mode == 'valid':
+                self.data = pickle.load(open('dataset/human_abag_valid.pkl', 'rb'))
+            else:
+                if file is None:
+                    raise KeyError("No test file provided")
+                else:
+                    self.data = pickle.load((open(file, 'rb')))
 
     def __len__(self):
         return len(self.data)
@@ -62,11 +75,11 @@ class DataCollator(object):
 
 
 class AntigenAntibodyPairedData(pl.LightningDataModule):
-    def __init__(self, batch_size, workers):
+    def __init__(self, batch_size, workers, species):
         super(AntigenAntibodyPairedData, self).__init__()
         self.collate_fn = DataCollator()
-        self.train = PairedBinder('train')
-        self.valid = PairedBinder('valid')
+        self.train = PairedBinder(mode='train', species=species)
+        self.valid = PairedBinder(mode='valid', species=species)
         self.batch_size = batch_size
         self.workers = workers
 
