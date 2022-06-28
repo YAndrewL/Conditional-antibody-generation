@@ -77,9 +77,9 @@ class SinCosPositionalEncoding(nn.Module):
         return pos
 
 
-class TransformerBlock(nn.Module):
+class EncoderBlock(nn.Module):
     def __init__(self, embed_size, heads, dropout, forward_expansion):
-        super(TransformerBlock, self).__init__()
+        super(EncoderBlock, self).__init__()
         self.attention = SelfAttention(embed_size, heads)
         self.norm1 = nn.LayerNorm(embed_size)
         self.norm2 = nn.LayerNorm(embed_size)
@@ -101,18 +101,19 @@ class TransformerBlock(nn.Module):
         return out, cross_attention
 
 
+# DecoderBlock = SelfAttention + EncoderBlock
 class DecoderBlock(nn.Module):
     def __init__(self, embed_size, heads, forward_expansion, dropout):
         super(DecoderBlock, self).__init__()
         self.attention = SelfAttention(embed_size, heads)  # similar blocks
         self.norm = nn.LayerNorm(embed_size)
-        self.transformer_block = TransformerBlock(embed_size, heads, dropout, forward_expansion)
+        self.encoder_block = EncoderBlock(embed_size, heads, dropout, forward_expansion)
         self.dropout = nn.Dropout(dropout)
 
     def forward(self, x, value, key, src_mask, trg_mask):
         attention, _ = self.attention(x, x, x, trg_mask)
         query = self.dropout(self.norm(attention) + x)
-        out, cross_attention = self.transformer_block(value, key, query, src_mask)
+        out, cross_attention = self.encoder_block(value, key, query, src_mask)
         return out, cross_attention
 
 
@@ -130,7 +131,6 @@ class Decoder(nn.Module):
             device,
     ):
         super(Decoder, self).__init__()
-        self.device = device
         self.aa_embedding = nn.Embedding(ab_vocab_size + 1, embed_size)
         self.position_embedding = SinCosPositionalEncoding(device, embed_size, max_length)
 
@@ -209,20 +209,20 @@ class Transformer(pl.LightningModule):
         else:
             self.logger.log_hyperparams(self.hparams, {'hp/train_loss': 0, 'hp/val_loss': 0})
 
-    def make_ab_mask(self, trg):
+    def make_trg_mask(self, trg):
         N, trg_len = trg.shape
-        # broadcast to every head
-        trg_mask = torch.tril(torch.ones((trg_len, trg_len))).expand(N, 1, trg_len, trg_len)
+        # broadcast to every head: [Batch, 1, len, len]
+        trg_mask = torch.tril(torch.ones((trg_len, trg_len))).expand(N, 1, trg_len, trg_len).long()
         return trg_mask.to(self.dev)
 
-    def make_ag_mask(self, src):
+    def make_src_mask(self, src):
         src_mask = src.ne(0).int()[:, :, 0].unsqueeze(1).unsqueeze(2)  # [Batch, 1, 1, len_k]
         return src_mask.to(self.dev)
 
     def forward(self, batch_data):
         ag, ab_input, _ = batch_data
-        ag_mask = self.make_ag_mask(ag)
-        ab_mask = self.make_ab_mask(ab_input)
+        ab_mask = self.make_trg_mask(ab_input)
+        ag_mask = self.make_src_mask(ag)
         out = self.decoder(ab_input, ag, ag_mask, ab_mask)
         return out
 

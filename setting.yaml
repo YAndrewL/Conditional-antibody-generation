@@ -13,12 +13,12 @@ model_params:
 
 trainer_params:
   max_epochs: 2000
-  gpus: 0
+  gpus: 1
   # strategy: 'ddp'
   log_every_n_steps: 1  # add loss to logger every n batch steps
   check_val_every_n_epoch: 5  # check validation every n% intervals of an epoch
 
 data_params:
-  batch_size: 512
-  workers: 8
-  species: 'human'
+  batch_size: 2
+  workers: 1
+  species: 'murine'
